@@ -147,30 +147,35 @@ impl<S: Simd> Iterator for GradientPainter<'_, S> {
 
 impl<S: Simd> crate::fine::Painter for GradientPainter<'_, S> {
     fn paint_u8(&mut self, buf: &mut [u8]) {
-        for chunk in buf.chunks_exact_mut(64) {
-            let first = self.next().unwrap();
-            let simd = first.r.simd;
-            let second = self.next().unwrap();
+        self.simd.vectorize(|| {
+            for chunk in buf.chunks_exact_mut(64) {
+                let first = self.next().unwrap();
+                let simd = first.r.simd;
+                let second = self.next().unwrap();
 
-            let r = u8x16::from_f32(simd, simd.combine_f32x8(first.r, second.r));
-            let g = u8x16::from_f32(simd, simd.combine_f32x8(first.g, second.g));
-            let b = u8x16::from_f32(simd, simd.combine_f32x8(first.b, second.b));
-            let a = u8x16::from_f32(simd, simd.combine_f32x8(first.a, second.a));
+                let r = u8x16::from_f32(simd, simd.combine_f32x8(first.r, second.r));
+                let g = u8x16::from_f32(simd, simd.combine_f32x8(first.g, second.g));
+                let b = u8x16::from_f32(simd, simd.combine_f32x8(first.b, second.b));
+                let a = u8x16::from_f32(simd, simd.combine_f32x8(first.a, second.a));
 
-            let combined = simd.combine_u8x32(simd.combine_u8x16(r, g), simd.combine_u8x16(b, a));
+                let combined =
+                    simd.combine_u8x32(simd.combine_u8x16(r, g), simd.combine_u8x16(b, a));
 
-            simd.store_interleaved_128_u8x64(combined, (&mut chunk[..]).try_into().unwrap());
-        }
+                simd.store_interleaved_128_u8x64(combined, (&mut chunk[..]).try_into().unwrap());
+            }
+        })
     }
 
     fn paint_f32(&mut self, buf: &mut [f32]) {
-        for chunk in buf.chunks_exact_mut(32) {
-            let (c1, c2) = self.next().unwrap().get();
-            c1.simd
-                .store_interleaved_128_f32x16(c1, (&mut chunk[..16]).try_into().unwrap());
-            c2.simd
-                .store_interleaved_128_f32x16(c2, (&mut chunk[16..]).try_into().unwrap());
-        }
+        self.simd.vectorize(|| {
+            for chunk in buf.chunks_exact_mut(32) {
+                let (c1, c2) = self.next().unwrap().get();
+                c1.simd
+                    .store_interleaved_128_f32x16(c1, (&mut chunk[..16]).try_into().unwrap());
+                c2.simd
+                    .store_interleaved_128_f32x16(c2, (&mut chunk[16..]).try_into().unwrap());
+            }
+        })
     }
 }
 
