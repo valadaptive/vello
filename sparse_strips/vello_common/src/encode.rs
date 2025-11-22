@@ -1029,7 +1029,8 @@ impl<T: FromF32Color> GradientLut<T> {
         }
 
         // Due to SIMD we worked in blocks of 4, so we need to truncate to the actual length.
-        lut.truncate(lut_size);
+        lut.truncate(lut_size + 1);
+        lut[lut_size] = [T::ZERO; 4];
 
         Self { lut, scale }
     }
