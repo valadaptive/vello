@@ -87,7 +87,7 @@ impl<S: Simd> Iterator for GradientPainter<'_, S> {
             self.simd.select_u32x8(
                 pos.simd_eq(pos),
                 indices,
-                u32x8::splat(self.simd, (self.lut.lut().len() - 1) as u32),
+                u32x8::splat(self.simd, self.lut.transparent_index() as u32),
             )
         } else {
             indices
