@@ -725,16 +725,17 @@ mod macros {
                         for chunk in buf.chunks_exact_mut(16) {
                             let next = self.next().unwrap();
                             let converted = u8x16::<S>::from_f32(next.simd, next);
-                            chunk.copy_from_slice(&converted.val);
+                            chunk.copy_from_slice(converted.val.as_array_ref());
                         }
                     })
                 }
 
                 fn paint_f32(&mut self, buf: &mut [f32]) {
+                    use vello_common::fearless_simd::*;
                     self.simd.vectorize(#[inline(always)] || {
                         for chunk in buf.chunks_exact_mut(16) {
                             let next = self.next().unwrap();
-                            chunk.copy_from_slice(&next.val);
+                            chunk.copy_from_slice(next.val.as_array_ref());
                         }
                     })
                 }
@@ -748,10 +749,11 @@ mod macros {
         ($($type_path:tt)+) => {
             impl<S: Simd> crate::fine::Painter for $($type_path)+ {
                 fn paint_u8(&mut self, buf: &mut [u8]) {
+                    use vello_common::fearless_simd::*;
                     self.simd.vectorize(#[inline(always)] || {
                         for chunk in buf.chunks_exact_mut(16) {
                             let next = self.next().unwrap();
-                            chunk.copy_from_slice(&next.val);
+                            chunk.copy_from_slice(next.val.as_array_ref());
                         }
                     })
                 }
@@ -764,7 +766,7 @@ mod macros {
                         for chunk in buf.chunks_exact_mut(16) {
                             let next = self.next().unwrap();
                             let converted = f32x16::<S>::from_u8(next.simd, next);
-                            chunk.copy_from_slice(&converted.val);
+                            chunk.copy_from_slice(converted.val.as_array_ref());
                         }
                     })
                 }

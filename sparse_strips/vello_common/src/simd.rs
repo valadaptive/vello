@@ -47,25 +47,15 @@ impl<S: Simd> Splat4thExt<S> for u8x16<S> {
     #[inline(always)]
     fn splat_4th(self) -> Self {
         // TODO: SIMDify
+        let val = self.val.as_array();
         Self {
-            val: [
-                self.val[3],
-                self.val[3],
-                self.val[3],
-                self.val[3],
-                self.val[7],
-                self.val[7],
-                self.val[7],
-                self.val[7],
-                self.val[11],
-                self.val[11],
-                self.val[11],
-                self.val[11],
-                self.val[15],
-                self.val[15],
-                self.val[15],
-                self.val[15],
-            ],
+            val: S::u8x16::from_array(
+                [
+                    val[3], val[3], val[3], val[3], val[7], val[7], val[7], val[7], val[11],
+                    val[11], val[11], val[11], val[15], val[15], val[15], val[15],
+                ],
+                self.simd,
+            ),
             simd: self.simd,
         }
     }

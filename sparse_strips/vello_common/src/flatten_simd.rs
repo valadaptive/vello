@@ -365,13 +365,13 @@ fn eval_cubics_simd<S: Simd>(simd: S, c: &CubicBez, n: usize, result: &mut Flatt
         let evaluated = eval_simd(p0_128, p1_128, p2_128, p3_128, t);
         let (low, high) = simd.split_f32x8(evaluated);
 
-        even_pts[i * 4..][..4].copy_from_slice(&low.val);
-        odd_pts[i * 4..][..4].copy_from_slice(&high.val);
+        even_pts[i * 4..][..4].copy_from_slice(low.val.as_array_ref());
+        odd_pts[i * 4..][..4].copy_from_slice(high.val.as_array_ref());
 
         t += t_inc;
     }
 
-    even_pts[n * 2..][..8].copy_from_slice(&p3_128.val);
+    even_pts[n * 2..][..8].copy_from_slice(p3_128.val.as_array_ref());
 }
 
 #[inline(always)]
@@ -389,7 +389,7 @@ fn estimate_subdiv_simd<S: Simd>(simd: S, sqrt_tol: f32, ctx: &mut FlattenCtx) {
         let x1 = p_onehalf.mul_add(2.0, x);
         let p1 = p2.mul_add(-0.5, x1);
 
-        odd_pts[(i * 8)..][..8].copy_from_slice(&p1.val);
+        odd_pts[(i * 8)..][..8].copy_from_slice(p1.val.as_array_ref());
 
         let d01 = p1 - p0;
         let d12 = p2 - p1;
@@ -445,11 +445,11 @@ fn estimate_subdiv_simd<S: Simd>(simd: S, sqrt_tol: f32, ctx: &mut FlattenCtx) {
         let uscale_a = u2 - u0;
         let uscale = 1.0 / uscale_a;
 
-        ctx.a0[i * 4..][..4].copy_from_slice(&a0.val);
-        ctx.da[i * 4..][..4].copy_from_slice(&da.val);
-        ctx.u0[i * 4..][..4].copy_from_slice(&u0.val);
-        ctx.uscale[i * 4..][..4].copy_from_slice(&uscale.val);
-        ctx.val[i * 4..][..4].copy_from_slice(&val.val);
+        ctx.a0[i * 4..][..4].copy_from_slice(a0.val.as_array_ref());
+        ctx.da[i * 4..][..4].copy_from_slice(da.val.as_array_ref());
+        ctx.u0[i * 4..][..4].copy_from_slice(u0.val.as_array_ref());
+        ctx.uscale[i * 4..][..4].copy_from_slice(uscale.val.as_array_ref());
+        ctx.val[i * 4..][..4].copy_from_slice(val.val.as_array_ref());
     }
 }
 
@@ -483,7 +483,7 @@ fn output_lines_simd<S: Simd>(
         let z1 = p1.mul_add(2.0 * t * mt, z);
         let p = p2.mul_add(t * t, z1);
 
-        out[j * 8..][..8].copy_from_slice(&p.val);
+        out[j * 8..][..8].copy_from_slice(p.val.as_array_ref());
 
         a += a_inc;
     }
