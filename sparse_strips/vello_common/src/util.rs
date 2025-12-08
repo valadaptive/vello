@@ -3,13 +3,13 @@
 
 //! Utility functions.
 
-use fearless_simd::{Simd, f32x16, u8x16};
+use fearless_simd::{Bytes, Simd, SimdFloat, f32x16, u8x16, u32x16};
 
 /// Convert f32x16 to u8x16.
 #[inline(always)]
 pub fn f32_to_u8<S: Simd>(val: f32x16<S>) -> u8x16<S> {
     let simd = val.simd;
-    let converted = val.cvt_u32().reinterpret_u8();
+    let converted = val.to_int::<u32x16<_>>().bitcast();
 
     let (x8_1, x8_2) = simd.split_u8x64(converted);
     let (p1, p2) = simd.split_u8x32(x8_1);

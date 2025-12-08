@@ -33,7 +33,8 @@ use crate::util::{BlendModeExt, EncodedImageExt};
 pub use highp::F32Kernel;
 pub use lowp::U8Kernel;
 use vello_common::fearless_simd::{
-    Simd, SimdBase, SimdFloat, SimdInto, f32x4, f32x8, f32x16, u8x16, u8x32, u32x4, u32x8,
+    Bytes, Simd, SimdBase, SimdFloat, SimdInt, SimdInto, f32x4, f32x8, f32x16, u8x16, u8x32, u32x4,
+    u32x8,
 };
 use vello_common::pixmap::Pixmap;
 use vello_common::simd::Splat4thExt;
@@ -79,7 +80,7 @@ impl<S: Simd> NumericVec<S> for u8x16<S> {
     fn from_f32(simd: S, val: f32x16<S>) -> Self {
         let v1 = f32x16::splat(simd, 255.0);
         let v2 = f32x16::splat(simd, 0.5);
-        let mulled = val.madd(v1, v2);
+        let mulled = val.mul_add(v1, v2);
 
         f32_to_u8(mulled)
     }
@@ -98,16 +99,22 @@ pub(crate) fn u8_to_f32<S: Simd>(val: u8x16<S>) -> f32x16<S> {
     let zip1 = simd.zip_high_u8x16(val, zeroes);
     let zip2 = simd.zip_low_u8x16(val, zeroes);
 
-    let p1 = simd.zip_low_u8x16(zip2, zeroes).reinterpret_u32().cvt_f32();
+    let p1 = simd
+        .zip_low_u8x16(zip2, zeroes)
+        .bitcast::<u32x4<_>>()
+        .to_float::<f32x4<_>>();
     let p2 = simd
         .zip_high_u8x16(zip2, zeroes)
-        .reinterpret_u32()
-        .cvt_f32();
-    let p3 = simd.zip_low_u8x16(zip1, zeroes).reinterpret_u32().cvt_f32();
+        .bitcast::<u32x4<_>>()
+        .to_float::<f32x4<_>>();
+    let p3 = simd
+        .zip_low_u8x16(zip1, zeroes)
+        .bitcast::<u32x4<_>>()
+        .to_float::<f32x4<_>>();
     let p4 = simd
         .zip_high_u8x16(zip1, zeroes)
-        .reinterpret_u32()
-        .cvt_f32();
+        .bitcast::<u32x4<_>>()
+        .to_float::<f32x4<_>>();
 
     simd.combine_f32x8(simd.combine_f32x4(p1, p2), simd.combine_f32x4(p3, p4))
 }
@@ -143,7 +150,7 @@ impl<S: Simd> CompositeType<u8, S> for u8x32<S> {
 
     #[inline(always)]
     fn from_color(simd: S, color: [u8; 4]) -> Self {
-        u32x8::block_splat(u32x4::splat(simd, u32::from_ne_bytes(color))).reinterpret_u8()
+        u32x8::block_splat(u32x4::splat(simd, u32::from_ne_bytes(color))).bitcast()
     }
 }
 
@@ -659,7 +666,7 @@ impl<S: Simd> PosExt<S> for f32x4<S> {
         let columns: [f32; Tile::HEIGHT as usize] = [0.0, 1.0, 2.0, 3.0];
         let column_mask: Self = columns.simd_into(simd);
 
-        column_mask.madd(Self::splat(simd, y_advance), Self::splat(simd, pos))
+        column_mask.mul_add(Self::splat(simd, y_advance), Self::splat(simd, pos))
     }
 }
 

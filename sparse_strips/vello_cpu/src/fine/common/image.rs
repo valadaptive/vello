@@ -259,7 +259,7 @@ impl<S: Simd> Iterator for FilteredImagePainter<'_, S> {
                         let color_sample = sample(x_positions, y_positions);
                         let w = element_wise_splat(self.simd, cx[x_idx] * cy[y_idx]);
 
-                        interpolated_color = w.madd(color_sample, interpolated_color);
+                        interpolated_color = w.mul_add(color_sample, interpolated_color);
                     }
                 }
 
@@ -298,7 +298,7 @@ impl<S: Simd> Iterator for FilteredImagePainter<'_, S> {
                         let color_sample = sample(x_positions, y_positions);
                         let w = element_wise_splat(self.simd, cx[x_idx] * cy[y_idx]);
 
-                        interpolated_color = w.madd(color_sample, interpolated_color);
+                        interpolated_color = w.mul_add(color_sample, interpolated_color);
                     }
                 }
 
@@ -385,7 +385,7 @@ pub(crate) fn sample<S: Simd>(
     x_positions: f32x4<S>,
     y_positions: f32x4<S>,
 ) -> u8x16<S> {
-    let idx = x_positions.cvt_u32() + y_positions.cvt_u32() * data.width_u32;
+    let idx = x_positions.to_int::<u32x4<_>>() + y_positions.to_int::<u32x4<_>>() * data.width_u32;
 
     u32x4::from_slice(
         simd,
@@ -396,7 +396,7 @@ pub(crate) fn sample<S: Simd>(
             data.pixmap.sample_idx(idx[3]).to_u32(),
         ],
     )
-    .reinterpret_u8()
+    .bitcast()
 }
 
 #[inline(always)]
@@ -417,7 +417,7 @@ pub(crate) fn extend<S: Simd>(
         crate::peniko::Extend::Pad => val.min(max - bias).max(f32x4::splat(simd, 0.0)),
         crate::peniko::Extend::Repeat => {
             // floor := (val * inv_max).floor() * max is the nearest multiple of `max` below val.
-            max.madd(-(val * inv_max).floor(), val)
+            max.mul_add(-(val * inv_max).floor(), val)
                 // In certain edge cases, we might still end up with a higher number.
                 .min(max - 1.0)
         }
@@ -435,7 +435,7 @@ pub(crate) fn extend<S: Simd>(
             // our `max` is always an integer number, u and s must also be an integer number
             // and thus `m_bits` must be 0.
             // Note that this is a wrapping sub!
-            let biased_bits = m_bits - bias_in_ulps.cvt_u32();
+            let biased_bits = m_bits - bias_in_ulps.to_int::<u32x4<_>>();
             f32x4::from_bytes(biased_bits.to_bytes())
                 // In certain edge cases, we might still end up with a higher number.
                 .min(max - 1.0)
@@ -494,7 +494,7 @@ fn single_weight<S: Simd>(
     c: f32x4<S>,
     d: f32x4<S>,
 ) -> f32x4<S> {
-    t.madd(d, c).madd(t, b).madd(t, a)
+    t.mul_add(d, c).mul_add(t, b).mul_add(t, a)
 }
 
 /// Mitchell filter with the variables B = 1/3 and C = 1/3.

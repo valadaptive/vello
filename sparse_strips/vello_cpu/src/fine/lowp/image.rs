@@ -5,7 +5,7 @@ use crate::fine::PosExt;
 use crate::fine::common::image::{ImagePainterData, extend, sample};
 use crate::fine::macros::u8x16_painter;
 use vello_common::encode::EncodedImage;
-use vello_common::fearless_simd::{Simd, SimdBase, f32x4, u8x16};
+use vello_common::fearless_simd::{Simd, SimdBase, SimdFloat, f32x4, u8x16};
 use vello_common::pixmap::Pixmap;
 use vello_common::simd::element_wise_splat;
 use vello_common::util::f32_to_u8;
@@ -108,9 +108,9 @@ impl<S: Simd> Iterator for BilinearImagePainter<'_, S> {
             .simd
             .widen_u8x16(sample(self.simd, &self.data, x_pos2, y_pos2));
 
-        let ip1 = (p00 * fx_inv + p10 * fx).shr(8);
-        let ip2 = (p01 * fx_inv + p11 * fx).shr(8);
-        let res = self.simd.narrow_u16x16((ip1 * fy_inv + ip2 * fy).shr(8));
+        let ip1 = (p00 * fx_inv + p10 * fx) >> 8;
+        let ip2 = (p01 * fx_inv + p11 * fx) >> 8;
+        let res = self.simd.narrow_u16x16((ip1 * fy_inv + ip2 * fy) >> 8);
 
         self.data.cur_pos += self.data.image.x_advance;
 

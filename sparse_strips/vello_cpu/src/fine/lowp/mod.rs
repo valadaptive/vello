@@ -54,9 +54,8 @@ impl<S: Simd> FineKernel<S> for U8Kernel {
         simd.vectorize(
             #[inline(always)]
             || {
-                let color = u8x64::block_splat(
-                    u32x4::splat(simd, u32::from_ne_bytes(src)).reinterpret_u8(),
-                );
+                let color =
+                    u8x64::block_splat(u32x4::splat(simd, u32::from_ne_bytes(src)).bitcast());
 
                 for el in dest.chunks_exact_mut(64) {
                     el.copy_from_slice(&color.val);
@@ -196,7 +195,7 @@ mod fill {
             #[inline(always)]
             || {
                 let one_minus_alpha = 255 - u8x32::splat(s, src[3]);
-                let src_c = u32x8::splat(s, u32::from_ne_bytes(src)).reinterpret_u8();
+                let src_c = u32x8::splat(s, u32::from_ne_bytes(src)).bitcast();
 
                 for next_dest in dest.chunks_exact_mut(64) {
                     // We process in batches of 64 because loading/storing is much faster this way (at least on NEON),
@@ -293,7 +292,7 @@ mod alpha_fill {
             #[inline(always)]
             || {
                 let src_a = u8x32::splat(s, src[3]);
-                let src_c = u32x8::splat(s, u32::from_ne_bytes(src)).reinterpret_u8();
+                let src_c = u32x8::splat(s, u32::from_ne_bytes(src)).bitcast();
                 let one = u8x32::splat(s, 255);
 
                 for (next_bg, next_mask) in dest.chunks_exact_mut(32).zip(alphas.chunks_exact(8)) {
@@ -367,9 +366,9 @@ fn mix<S: Simd>(src_c: u8x32<S>, bg_c: u8x32<S>, blend_mode: BlendMode) -> u8x32
 
     let to_u8 = |val1: f32x16<S>, val2: f32x16<S>| {
         let val1 =
-            f32_to_u8(f32x16::splat(val1.simd, 255.0).madd(val1, f32x16::splat(val1.simd, 0.5)));
+            f32_to_u8(f32x16::splat(val1.simd, 255.0).mul_add(val1, f32x16::splat(val1.simd, 0.5)));
         let val2 =
-            f32_to_u8(f32x16::splat(val2.simd, 255.0).madd(val2, f32x16::splat(val2.simd, 0.5)));
+            f32_to_u8(f32x16::splat(val2.simd, 255.0).mul_add(val2, f32x16::splat(val2.simd, 0.5)));
 
         val1.simd.combine_u8x16(val1, val2)
     };
@@ -385,10 +384,10 @@ fn mix<S: Simd>(src_c: u8x32<S>, bg_c: u8x32<S>, blend_mode: BlendMode) -> u8x32
 
 #[inline(always)]
 fn extract_masks<S: Simd>(simd: S, masks: &[u8]) -> u8x32<S> {
-    let m1 =
-        u32x4::splat(simd, u32::from_ne_bytes(masks[0..4].try_into().unwrap())).reinterpret_u8();
-    let m2 =
-        u32x4::splat(simd, u32::from_ne_bytes(masks[4..8].try_into().unwrap())).reinterpret_u8();
+    let m1: u8x16<S> =
+        u32x4::splat(simd, u32::from_ne_bytes(masks[0..4].try_into().unwrap())).bitcast();
+    let m2: u8x16<S> =
+        u32x4::splat(simd, u32::from_ne_bytes(masks[4..8].try_into().unwrap())).bitcast();
 
     let zipped1 = m1.zip_low(m1);
     let zipped1 = zipped1.zip_low(zipped1);
@@ -437,7 +436,7 @@ fn pack_block<S: Simd>(simd: S, region: &mut Region<'_>, mut buf: &[u8]) {
 
         let casted: &[u32; 16] = cast_slice::<u8, u32>(col).try_into().unwrap();
 
-        let loaded = simd.load_interleaved_128_u32x16(casted).reinterpret_u8();
+        let loaded: u8x64<S> = simd.load_interleaved_128_u32x16(casted).bitcast();
         dest_slices[0][dest_idx..][..16].copy_from_slice(&loaded.val[..16]);
         dest_slices[1][dest_idx..][..16].copy_from_slice(&loaded.val[16..32]);
         dest_slices[2][dest_idx..][..16].copy_from_slice(&loaded.val[32..48]);
