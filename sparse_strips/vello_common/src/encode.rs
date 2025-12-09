@@ -17,7 +17,7 @@ use alloc::vec::Vec;
 #[cfg(not(feature = "multithreading"))]
 use core::cell::OnceCell;
 use core::hash::{Hash, Hasher};
-use fearless_simd::{Simd, SimdBase, SimdFloat, SimdVector, f32x4, f32x16, mask32x4, mask32x16};
+use fearless_simd::{Simd, SimdBase, SimdFloat, f32x4, f32x16, mask32x4, mask32x16};
 use peniko::color::cache_key::{BitEq, BitHash, CacheKey};
 use peniko::color::gradient_unpremultiplied;
 use peniko::{
@@ -935,7 +935,7 @@ impl FromF32Color for f32 {
     const ZERO: Self = 0.0;
 
     fn from_f32<S: Simd>(color: f32x4<S>) -> [Self; 4] {
-        color.val.as_array()
+        color.into()
     }
 }
 

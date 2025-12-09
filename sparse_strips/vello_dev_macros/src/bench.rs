@@ -76,12 +76,12 @@ pub(crate) fn vello_bench_inner(_: TokenStream, item: TokenStream) -> TokenStrea
                 });
             }
 
-            #[cfg(target_arch = "x86_64")]
+            /*#[cfg(target_arch = "x86_64")]
             if let Some(neon) = Level::new().as_sse4_2() {
                 c.bench_function(&get_bench_name(&#input_fn_name_str, "f32_sse4_2"), |b| {
                     run_float(b, neon);
                 });
-            }
+            }*/
 
             #[cfg(target_arch = "x86_64")]
             if let Some(neon) = Level::new().as_avx2() {
