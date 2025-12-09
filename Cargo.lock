@@ -932,6 +932,7 @@ dependencies = [
 [[package]]
 name = "fearless_simd"
 version = "0.3.0"
+source = "git+https://github.com/valadaptive/fearless_simd?branch=native-vectors#3f6fdeffd75cba87d812234092e165dfa20e931c"
 dependencies = [
  "libm",
 ]
